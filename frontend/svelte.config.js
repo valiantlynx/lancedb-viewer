@@ -1,20 +1,63 @@
 import { mdsvex } from 'mdsvex';
 import adapter from '@sveltejs/adapter-node';
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+import { mdsvexConfig } from "./mdsvex.config.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
+	preprocess: [
+		mdsvex(mdsvexConfig),
+		vitePreprocess({
+			style: {
+				css: {
+					postcss: join(__dirname, "postcss.config.cjs"),
+				},
+			},
+		}),
+	],
+	extensions: [".svelte", ".md"],
+
 	kit: {
-		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-		adapter: adapter(),
-		alias: {
-			"@/*": "./src/lib/*",
+		// https://kit.svelte.dev/docs/adapter-cloudflare#options
+		adapter: adapter({
+			routes: {
+				// Since we have so many static assets, we'll manually define
+				// the globs for them to save our 100 include/exclude limit
+				exclude: [
+					"<build>",
+					// prerendered content
+					"/docs/*",
+					"/blocks/*",
+					"/blocks.html",
+					"/docs.html",
+					// static
+					"/registry/*",
+					"/fonts/*",
+					"/avatars/*",
+					"/images/*",
+					"/android-chrome-192x192.png",
+					"/android-chrome-512x512.png",
+					"/apple-touch-icon.png",
+					"/favicon-16x16.png",
+					"/favicon-32x32.png",
+					"/favicon.ico",
+					"/og.png",
+					"/schema.json",
+					"/site.webmanifest",
+				],
+			},
+		}),
+		prerender: {
+			handleMissingId: (details) => {
+				if (details.id === "#") return;
+				console.warn(details.message);
+			},
 		},
 	},
-
-	preprocess: [mdsvex()],
-	extensions: ['.svelte', '.svx']
 };
 
 export default config;
